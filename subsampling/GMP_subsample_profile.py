@@ -4,6 +4,7 @@ import numpy as np
 import os
 import cProfile
 import pickle
+import torch
 
 from amptorch.trainer import AtomsTrainer
 from amptorch.preprocessing import AtomsToData, FeatureScaler, TargetScaler
@@ -14,7 +15,7 @@ def convert_and_pickle_atoms(images, dump_name):
     sigmas = [0.02, 0.2, 0.4, 0.69, 1.1, 1.66, 2.66, 4.4]
 
     gaussians = {}
-    dir = "./valence_gaussians"
+    dir = "../valence_gaussians"
     for file in os.listdir(dir):
         el = file.split("_")[0]
         gaussians[el] = dir + "/" + file
@@ -51,10 +52,10 @@ def convert_and_pickle_atoms(images, dump_name):
     pickle.dump(torch_data, open("{}.p".format(dump_name), "wb"))
 
 def load_qm9_images():
-    with open("./data/QM9_train_120000_linear_fit.p", 'rb') as pickle_file:
+    with open("data/QM9_train_120000_linear_fit.p", 'rb') as pickle_file:
         images = pickle.load(pickle_file)
 
-    with open("./data/QM9_test_120000_linear_fit.p", 'rb') as pickle_file:
+    with open("data/QM9_test_120000_linear_fit.p", 'rb') as pickle_file:
         test_images = pickle.load(pickle_file)
     
     for i in range(len(images)):
@@ -77,12 +78,12 @@ def load_and_pickle_qm9():
     convert_and_pickle_atoms(test_images, "data/QM9_test_torch_data")
 
 def load_pickled_QM9_torch_data():
-    data = pickle.load( open( "data/QM9_train_torch_data.p", "rb" ) )
+    data = pickle.load(open("data/QM9_train_torch_data.p", "rb"))
     return data
 
 def load_oc20_images():
-    images = ase.io.read("./data/oc20_3k_train.traj", ":")
-    test_images = ase.io.read("./data/oc20_300_test.traj", ":")
+    images = ase.io.read("data/oc20_3k_train.traj", ":")
+    test_images = ase.io.read("data/oc20_300_test.traj", ":")
     return images, test_images
 
 def pickle_oc20():
@@ -91,7 +92,7 @@ def pickle_oc20():
     convert_and_pickle_atoms(test_images, "data/oc20_test_torch_data")
 
 def load_pickled_oc20_torch_data():
-    data = pickle.load(open( "data/oc20_train_torch_data.p", "rb" ) )
+    data = pickle.load(open("data/oc20_train_torch_data.p", "rb"))
     return data
 
 def get_config():
@@ -102,7 +103,7 @@ def get_config():
     sigmas = [0.02, 0.2, 0.4, 0.69, 1.1, 1.66, 2.66, 4.4]
     
     gaussians = {}
-    dir = "./valence_gaussians"
+    dir = "../valence_gaussians"
     for file in os.listdir(dir):
         el = file.split("_")[0]
         gaussians[el] = dir + "/" + file
@@ -124,24 +125,67 @@ def get_config():
         "save": False,  # boolean. whether to save the sampling results.
     }
     
+    # config = {
+    #     "model": {
+    #         "name": "singlenn",
+    #         "get_forces": False,
+    #         "num_layers": 3,
+    #         "num_nodes": 20,
+    #     },
+    #     "optim": {
+    #         "device": "cpu",
+    #         "force_coefficient": 0.0,
+    #         "lr": 1e-2,
+    #         "batch_size": 10,
+    #         "epochs": 100,
+    #     },
+    #     "dataset": {
+    #         "raw_data": None,
+    #         # "raw_data": "./data/oc20_3k_train.traj",
+    #         "val_split": 0,
+    #         "fp_scheme": "gmp",
+    #         "fp_params": MCSHs,
+    #         "save_fps": True,
+    #         "sampling": nns_sampling,  # sampling config here
+    #     },
+    #     "cmd": {
+    #         "debug": False,
+    #         "run_dir": "./",
+    #         "seed": 1,
+    #         "identifier": "test",
+    #         "verbose": True,
+    #         "logger": False,
+    #     },
+    # }
     config = {
         "model": {
-            "name": "singlenn",
+            "name":"singlenn",
             "get_forces": False,
-            "num_layers": 3,
-            "num_nodes": 20,
+            "hidden_layers": [64, 64, 64],
+            #"elementwise":False,
+            "activation": torch.nn.GELU,
+            "batchnorm": True,
+            "initialization": "xavier",
         },
         "optim": {
-            "device": "cpu",
+            "gpus": 0, # for cpu training
             "force_coefficient": 0.0,
-            "lr": 1e-2,
-            "batch_size": 10,
-            "epochs": 100,
+            "lr": 5e-3,
+            "batch_size": 128,
+            "epochs": 4000,
+            "loss": "mae",
+            "scheduler": {
+                "policy": "StepLR",
+                "params": {
+                    "step_size": 300,
+                    "gamma": 0.7
+                }
+            }
         },
         "dataset": {
             "raw_data": None,
             # "raw_data": "./data/oc20_3k_train.traj",
-            "val_split": 0,
+            "val_split": 0.1,
             "fp_scheme": "gmp",
             "fp_params": MCSHs,
             "save_fps": True,
@@ -154,7 +198,10 @@ def get_config():
             "identifier": "test",
             "verbose": True,
             "logger": False,
-        },
+            "dtype": torch.DoubleTensor,
+            "early_stopping": True,
+            "early_stopping_patience": 75
+        }
     }
     
     return config
@@ -172,7 +219,7 @@ def sample_config():
     
 def get_error_QM9():
     images, test_images = load_qm9_images()
-    images = images[:20]
+    images = images
     
     config = get_config()
     config["dataset"]["raw_data"] = images
@@ -185,9 +232,6 @@ def get_error_QM9():
     true_energies = np.array([image.get_potential_energy() for image in test_images])
     pred_energies = np.array(predictions["energy"])
 
-    # new QM9 MSE - 486.2418641238003; 156 images, 162 datapoints
-    # old QM9 MSE - 132.26919448821923; 961 images, 1025 datapoints
-    # with .15 cutoff and .1 rate - 111.58441829833816; 17545 images, 20736 datapoints;
     print("Energy MSE:", np.mean((true_energies - pred_energies) ** 2))
 
 def error_qm9_10_runs():
@@ -222,13 +266,11 @@ def error_oc20_10_runs():
         trainer = AtomsTrainer(config)
         trainer.train()
         
-        test_images = ase.io.read("./data/oc20_300_test.traj", ":")
+        test_images = ase.io.read("../data/oc20_300_test.traj", ":")
         predictions = trainer.predict(test_images)
     
         true_energies = np.array([image.get_potential_energy() for image in test_images])
         pred_energies = np.array(predictions["energy"])
-        # Old oc20 error - 24414.864; 562 images, 944 datapoints
-        # new oc20 error - 29710.859; 181 images, 206 datapoints
         error = np.mean((true_energies - pred_energies) ** 2)
         errors.append(error)
         print("Energy MSE:", error)
@@ -244,13 +286,11 @@ def error_oc20():
     trainer = AtomsTrainer(config)
     trainer.train()
     
-    test_images = ase.io.read("./data/oc20_300_test.traj", ":")
+    test_images = ase.io.read("../data/oc20_300_test.traj", ":")
     predictions = trainer.predict(test_images)
     
     true_energies = np.array([image.get_potential_energy() for image in test_images])
     pred_energies = np.array(predictions["energy"])
-    # Old oc20 error - 24414.864; 562 images, 944 datapoints
-    # new oc20 error - 29710.859; 181 images, 206 datapoints
     error = np.mean((true_energies - pred_energies) ** 2)
     print("Energy MSE:", error)
     
@@ -260,7 +300,7 @@ def error_h2o():
     trainer = AtomsTrainer(config)
     trainer.train()
     
-    test_images = ase.io.read("./data/water_validation.traj", ":")
+    test_images = ase.io.read("../data/water_validation.traj", ":")
     predictions = trainer.predict(test_images)
     
     true_energies = np.array([image.get_potential_energy() for image in test_images])
@@ -277,13 +317,11 @@ def error_h2o_10_runs():
         trainer = AtomsTrainer(config)
         trainer.train()
         
-        test_images = ase.io.read("./data/water_validation.traj", ":")
+        test_images = ase.io.read("../data/water_validation.traj", ":")
         predictions = trainer.predict(test_images)
         
         true_energies = np.array([image.get_potential_energy() for image in test_images])
         pred_energies = np.array(predictions["energy"])
-        # Old oc20 error - 24414.864; 562 images, 944 datapoints
-        # new oc20 error - 29710.859; 181 images, 206 datapoints
         error = np.mean((true_energies - pred_energies) ** 2)
         errors.append(error)
         print("Energy MSE:", error)
@@ -299,7 +337,7 @@ def error_h2o_no_sample():
     trainer = AtomsTrainer(config)
     trainer.train()
     
-    test_images = ase.io.read("./data/water_validation.traj", ":")
+    test_images = ase.io.read("../data/water_validation.traj", ":")
     predictions = trainer.predict(test_images)
     
     true_energies = np.array([image.get_potential_energy() for image in test_images])
@@ -329,7 +367,6 @@ def error_QM9_no_sample():
     true_energies = np.array([image.get_potential_energy() for image in test_images])
     pred_energies = np.array(predictions["energy"])
     
-    # QM9 no sample MSE - 31.59001569069252; 120000 images, 2163722 datapoints
     print("Energy MSE:", np.mean((true_energies - pred_energies) ** 2))
 
 def error_oc20_no_sample():
@@ -339,12 +376,11 @@ def error_oc20_no_sample():
     trainer = AtomsTrainer(config)
     trainer.train()
 
-    test_images = ase.io.read("./data/oc20_300_test.traj", ":")
+    test_images = ase.io.read("../data/oc20_300_test.traj", ":")
     predictions = trainer.predict(test_images)
 
     true_energies = np.array([image.get_potential_energy() for image in test_images])
     pred_energies = np.array(predictions["energy"])
-    # oc20 no sample MSE - 21470.89622080857; 3000 images, XX datapoints
     print("Energy MSE:", np.mean((true_energies - pred_energies) ** 2))
 
 
