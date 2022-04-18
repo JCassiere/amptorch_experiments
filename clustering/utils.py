@@ -1,4 +1,4 @@
-from amptorch.sampler import subsample_clustering, reduce_dimensions_with_pca, scale_and_standardize_data
+from amptorch.subsampling import subsample_clustering, reduce_dimensions_with_pca, scale_and_standardize_data
 import pickle
 import json
 import numpy as np

@@ -1,8 +1,9 @@
 import numpy as np
-from amptorch.sampler import average_images_over_fingerprints, extract_fingerprints_with_image_indices, \
+from amptorch.subsampling import average_images_over_fingerprints, extract_fingerprints_with_image_indices, \
     reduce_dimensions_with_pca, scale_and_standardize_data, subsample_clustering
 from utils import load_qm9, load_oc20_3k, get_clusters, images_to_formulas, clusters_to_formulas, output_clusters_to_json
 from sklearn.cluster import KMeans
+import time
 
 def cluster_and_output_oc20_image_average():
     data, images = load_oc20_3k()
@@ -23,7 +24,7 @@ def cluster_and_output_qm9_image_average():
 def cluster_qm9_fingerprints_to_elements():
     data, images = load_qm9()
     # data, images = load_oc20_3k()
-    data = data[:500]
+    # data = data[:5000]
     per_image_fingerprints = []
     per_image_elements = []
 
@@ -35,16 +36,19 @@ def cluster_qm9_fingerprints_to_elements():
 
     fingerprints = np.vstack(per_image_fingerprints)
     elements = np.concatenate(per_image_elements)
-    # scaled_and_reduced_data = scale_and_standardize_data(reduce_dimensions_with_pca(fingerprints, max_components=6))
-    scaled_data = scale_and_standardize_data(fingerprints)
-    # clusters = subsample_clustering(scaled_and_reduced_data, max_clusters=100)
-    clusters = subsample_clustering(scaled_data, max_clusters=70)
+    scaled_and_reduced_data = scale_and_standardize_data(reduce_dimensions_with_pca(fingerprints, max_components=6))
+    # scaled_data = scale_and_standardize_data(fingerprints)
+    start = time.time()
+    clusters = subsample_clustering(scaled_and_reduced_data, max_clusters=70, start_cutoff_sig=0.55)
+    # clusters = subsample_clustering(scaled_data, max_clusters=70, start_cutoff_sig=0.55)
+    print("NN subsample clustering time: {}".format(time.time() - start))
+    
     clusters_by_element = []
     for cluster in clusters.values():
         cluster_elements = elements[np.array(cluster)]
         unique, counts = np.unique(cluster_elements, return_counts=True)
         clusters_by_element.append(dict(zip(unique, counts)))
-        
+    
     nn_cluster_precisions = []
     nn_cluster_counts = []
     for cluster in clusters_by_element:
@@ -55,10 +59,13 @@ def cluster_qm9_fingerprints_to_elements():
         nn_cluster_counts.append(tot)
     nn_cluster_counts = np.array(nn_cluster_counts)
     weighted_average_nn_precision = np.sum(nn_cluster_precisions * nn_cluster_counts) / np.sum(nn_cluster_counts)
+    print("Weighted average nn subsample clustering precision: {}".format(weighted_average_nn_precision))
     
+    start = time.time()
     n_clusters = 50
     km = KMeans(n_clusters=n_clusters)
-    km.fit_predict(scaled_data)
+    km.fit_predict(scaled_and_reduced_data)
+    print("K-means clustering time: {}".format(time.time() - start))
     km_clusters = [{} for _ in range(n_clusters)]
     for el, cluster in zip(elements, km.labels_):
         try:
@@ -76,7 +83,7 @@ def cluster_qm9_fingerprints_to_elements():
         km_cluster_counts.append(tot)
     km_cluster_counts = np.array(km_cluster_counts)
     weighted_average_km_precision = np.sum(km_cluster_precisions * km_cluster_counts) / np.sum(km_cluster_counts)
-    print(1)
+    print("Weighted average k-means clustering precision: {}".format(weighted_average_km_precision))
 
 if __name__ == "__main__":
     # cluster_and_output_oc20_image_average()
