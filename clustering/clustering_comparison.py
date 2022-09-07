@@ -3,7 +3,7 @@ import time
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
 from utils import load_qm9
-from amptorch.sampler import average_images_over_fingerprints, reduce_dimensions_with_pca, \
+from amptorch.subsampling import average_images_over_fingerprints, reduce_dimensions_with_pca, \
     scale_and_standardize_data, subsample_clustering
 
 

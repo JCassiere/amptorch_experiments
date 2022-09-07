@@ -208,7 +208,7 @@ def get_config():
 
 def sample_config():
     return {
-        "cutoff": 0.45,  # float. cutoff defined in terms of standard deviation
+        "cutoff": 0.25,  # float. cutoff defined in terms of standard deviation
         "image_average": False,  # boolean. using atomic fingerprints
         "preprocess": {
             "method": "PCA",  # performing preprocessing used by PCA
@@ -261,7 +261,7 @@ def error_oc20_10_runs():
     errors = []
     for i in range(10):
         config = get_config()
-        config["dataset"]["raw_data"] = "./data/oc20_3k_train.traj"
+        config["dataset"]["raw_data"] = "../data/oc20_3k_train.traj"
 
         trainer = AtomsTrainer(config)
         trainer.train()
@@ -281,7 +281,7 @@ def error_oc20_10_runs():
 
 def error_oc20():
     config = get_config()
-    config["dataset"]["raw_data"] = "./data/oc20_3k_train.traj"
+    config["dataset"]["raw_data"] = "../data/oc20_3k_train.traj"
     
     trainer = AtomsTrainer(config)
     trainer.train()
@@ -296,7 +296,7 @@ def error_oc20():
     
 def error_h2o():
     config = get_config()
-    config["dataset"]["raw_data"] = "./data/water_data.traj"
+    config["dataset"]["raw_data"] = "../data/water_data.traj"
     trainer = AtomsTrainer(config)
     trainer.train()
     
@@ -311,7 +311,7 @@ def error_h2o_10_runs():
     errors = []
     for i in range(10):
         config = get_config()
-        config["dataset"]["raw_data"] = "./data/water_data.traj"
+        config["dataset"]["raw_data"] = "../data/water_data.traj"
         # config["dataset"]["sampling"] = None
 
         trainer = AtomsTrainer(config)
@@ -344,14 +344,6 @@ def error_h2o_no_sample():
     pred_energies = np.array(predictions["energy"])
     print("Energy MSE:", np.mean((true_energies - pred_energies) ** 2))
 
-# def profile_only_oc20():
-#     images, test_images = load_oc20_images()
-#     data = load_pickled_oc20_torch_data()
-#     sampling_params = sample_config()
-#
-#     subsampled_data = \
-#         NearestNeighbor(data, sampling_params, images, "").run()
-
 def error_QM9_no_sample():
     images, test_images = load_qm9_images()
 
@@ -371,7 +363,7 @@ def error_QM9_no_sample():
 
 def error_oc20_no_sample():
     config = get_config()
-    config["dataset"]["raw_data"] = "./data/oc20_3k_train.traj"
+    config["dataset"]["raw_data"] = "../data/oc20_3k_train.traj"
     config["dataset"]["sampling"] = None
     trainer = AtomsTrainer(config)
     trainer.train()
@@ -384,28 +376,19 @@ def error_oc20_no_sample():
     print("Energy MSE:", np.mean((true_energies - pred_energies) ** 2))
 
 
-# def profile_only_QM9():
-#     images, test_images = load_qm9_images()
-#     data = load_pickled_QM9_torch_data()
-#     sampling_params = sample_config()
-#
-#     subsampled_data = \
-#         NearestNeighbor(data, sampling_params, images, "").run()
-
 if __name__ == "__main__":
     start_time = time.time()
     # pickle_oc20()
     # load_and_pickle_qm9()
-    # cProfile.run("profile_only_QM9()", filename="subsampling.prof")
-    get_error_QM9()
+    # cProfile.run("error_oc20()", filename="subsampling.prof")
+    # get_error_QM9()
     # error_qm9_10_runs()
     # error_h2o_10_runs()
     # error_QM9_no_sample()
-    # cProfile.run("profile_only_oc20()", filename="subsampling.prof")
     # error_oc20_10_runs()
-    # error_oc20()
+    error_oc20()
     # error_h2o()
     # error_h2o_no_sample()
-    # error_oc20_no_sample()
+    error_oc20_no_sample()
     end_time = time.time()
     print("Total time elapsed: {}".format(end_time - start_time))
