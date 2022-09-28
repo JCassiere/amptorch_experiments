@@ -1,4 +1,5 @@
 from amptorch.subsampling import subsample_clustering, reduce_dimensions_with_pca, scale_and_standardize_data
+import ase.io
 import pickle
 import json
 import numpy as np
@@ -29,6 +30,10 @@ def load_qm9():
     images, _ = load_qm9_images()
     return data, images
 
+def load_oc20_images():
+    images = ase.io.read("data/oc20_3k_train.traj", ":")
+    test_images = ase.io.read("data/oc20_300_test.traj", ":")
+    return images, test_images
 
 def load_oc20_3k():
     data = pickle.load(open("data/oc20_train_torch_data.p", "rb"))
@@ -62,3 +67,4 @@ def output_clusters_to_json(cluster_formulas, dataset_description):
     json.dump(cluster_formulas, oc20_out, indent=4)
     oc20_top20_out = open(dataset_description + "_clusters_top20.json", "w")
     json.dump(top_20, oc20_top20_out, indent=4)
+    
