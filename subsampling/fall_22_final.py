@@ -24,6 +24,7 @@ def save_fingerprints_to_json(fingerprints, fingerprints_to_image_index, filenam
     fingerprints_index_out = open("../data/{}_fingerprints_index.json".format(filename), "w")
     json.dump(fp_index_list, fingerprints_index_out, indent=4)
     
+
 def subsample_and_kde(data, subsample_method, cutoff=0.24):
     fingerprints, fingerprints_to_image_index = extract_fingerprints_with_image_indices(data)
     reduced = reduce_dimensions_with_pca(fingerprints, max_components=6)
@@ -36,10 +37,12 @@ def subsample_and_kde(data, subsample_method, cutoff=0.24):
     x_axis_pts, log_dens = point_diversity_kde(points_to_keep)
     return x_axis_pts, log_dens
     
+    
 def oc20_3k_kde():
     data = load_oc20_3k_data()
     x_axis_pts, log_dens = subsample_and_kde(data, kdtree_subsample, cutoff=0.3)
     plot_kde(x_axis_pts, log_dens, "OC20 3k Standard KDTree")
+    
     
 def oc20_3k_random_subsample_kde():
     data = load_oc20_3k_data()
@@ -51,6 +54,7 @@ def oc20_3k_random_subsample_kde():
     print("std: {}".format(std))
     x_axis_pts, log_dens = point_diversity_kde(scaled[np.random.choice(scaled.shape[0], size=9000, replace=False)])
     plot_kde(x_axis_pts, log_dens, "OC20 3k Random Subsampling")
+    
     
 def kmeans_kde_no_dim_reduction(data, num_points, title):
     print("Beginning {}".format(title))
@@ -69,6 +73,7 @@ def kmeans_kde_no_dim_reduction(data, num_points, title):
     
     x_axis_pts, log_dens = point_diversity_kde(points_to_keep)
     plot_kde(x_axis_pts, log_dens, title + " {} points".format(num_points))
+
 
 def kdtree_no_dim_reduction(data, title, cutoff=0.5):
     print("Beginning {}".format(title))
@@ -93,6 +98,7 @@ def faiss_no_dim_reduction(data, index_fn, title, cutoff=2):
     scaled = scale_and_standardize_data(fingerprints)
     indices_to_keep = faiss_subsample(scaled, index_fn, cutoff_sig=cutoff, verbose=2)
     points_to_keep = scaled[indices_to_keep]
+    save_fingerprints_to_json(points_to_keep, fingerprints_to_image_index[indices_to_keep], "test_json")
     
     num_points = number_of_points_remaining(points_to_keep)
     print("Number of points for {}: {}".format(title, num_points))
@@ -129,27 +135,27 @@ def kde_random_subsample(data, title, num_points):
 def kde_experiments():
     oc20_3k_data = load_oc20_3k_data()
     qm9_data = load_qm9_data()
-
+    
     #OC20 3K
-    faiss_no_dim_reduction(oc20_3k_data, flat_index, "OC20 3K Flat Bandwidth=0.5")
-    faiss_no_dim_reduction(oc20_3k_data, ivf_index, "OC20 3K IVF Bandwidth=0.5")
-    faiss_no_dim_reduction(oc20_3k_data, ivfpq_index, "OC20 3K IVFPQ Bandwidth=0.5")
-    faiss_no_dim_reduction(oc20_3k_data, hnsw_index, "OC20 3K HNSW Bandwidth=0.5")
-    kmeans_kde_no_dim_reduction(oc20_3k_data, 20000, "OC20 3K Kmeans subsample")
-    kdtree_no_dim_reduction(oc20_3k_data, "OC20 3K KD-Tree Bandwidth=0.03")
+    # faiss_no_dim_reduction(oc20_3k_data, flat_index, "OC20 3K Flat Bandwidth=0.5")
+    # faiss_no_dim_reduction(oc20_3k_data, ivf_index, "OC20 3K IVF Bandwidth=0.5")
+    # faiss_no_dim_reduction(oc20_3k_data, ivfpq_index, "OC20 3K IVFPQ Bandwidth=0.5")
+    # faiss_no_dim_reduction(oc20_3k_data, hnsw_index, "OC20 3K HNSW Bandwidth=0.5")
+    # kmeans_kde_no_dim_reduction(oc20_3k_data, 20000, "OC20 3K Kmeans subsample")
+    # kdtree_no_dim_reduction(oc20_3k_data, "OC20 3K KD-Tree Bandwidth=0.03")
     
     
     #QM9
-    faiss_no_dim_reduction(qm9_data, flat_index, "QM9 Flat Bandwidth=0.5")
+    # faiss_no_dim_reduction(qm9_data, flat_index, "QM9 Flat Bandwidth=0.5")
     faiss_no_dim_reduction(qm9_data, ivf_index, "QM9 IVF Bandwidth=0.5")
-    faiss_no_dim_reduction(qm9_data, ivfpq_index, "QM9 IVFPQ Bandwidth=0.5")
-    faiss_no_dim_reduction(qm9_data, hnsw_index, "QM9 HNSW Bandwidth=0.5")
-    kmeans_kde_no_dim_reduction(qm9_data, 20000, "QM9 Kmeans subsample")
-    kdtree_no_dim_reduction(qm9_data, "QM9 KD-Tree Bandwidth=0.5")
+    # faiss_no_dim_reduction(qm9_data, ivfpq_index, "QM9 IVFPQ Bandwidth=0.5")
+    # faiss_no_dim_reduction(qm9_data, hnsw_index, "QM9 HNSW Bandwidth=0.5")
+    # kmeans_kde_no_dim_reduction(qm9_data, 20000, "QM9 Kmeans subsample")
+    # kdtree_no_dim_reduction(qm9_data, "QM9 KD-Tree Bandwidth=0.5")
 
     #Raw datasets
-    full_kde(oc20_3k_data, "OC20 Full Dataset")
-    kde_random_subsample(qm9_data, "QM9 Random Subsample", 20000)
+    # full_kde(oc20_3k_data, "OC20 Full Dataset")
+    # kde_random_subsample(qm9_data, "QM9 Random Subsample", 20000)
 
 if __name__ == "__main__":
     kde_experiments()
