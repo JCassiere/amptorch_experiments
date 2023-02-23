@@ -1,0 +1,32 @@
+name: amptorch_experiments
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - python=3.9.*
+  - pytorch=1.10.*
+  - h5py
+  - matplotlib=3.3.*
+  - pip
+  - tqdm=4.45.*
+  - cpuonly
+  - faiss-cpu
+  - scikit-learn
+  - matplotlib
+  - numpy
+  - pip:
+    - ase==3.21.*
+    - cffi
+    - lmdb==1.0.0
+    - pre-commit
+    - pykdtree
+    - skorch==0.10.*
+    - torch-cluster
+    - -f https://data.pyg.org/whl/torch-1.10.0+cpu.html
+    - torch-geometric
+    - -f https://data.pyg.org/whl/torch-1.10.0+cpu.html
+    - torch-scatter
+    - -f https://data.pyg.org/whl/torch-1.10.0+cpu.html
+    - torch-sparse
+    - -f https://data.pyg.org/whl/torch-1.10.0+cpu.html
