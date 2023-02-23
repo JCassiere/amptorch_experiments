@@ -1,16 +1,10 @@
-import time
-
-import numpy as np
-
-from data_exchange import save_to_numpy, load_numpy_data, save_experiment
+from data_exchange import load_numpy_data, save_experiment
 from ccsubsample.subsampling.utils import *
 from ccsubsample.subsampling.evaluation_metrics import *
 from ccsubsample.subsampling.subsampling import faiss_flat_subsample, faiss_ivf_subsample, faiss_ivfpq_subsample, kmeans_subsample
 
-
 def random_subsampling_experiment(scaled_data, title, num_points_desired):
     start = time.time()
-    indices = np.arange(0, scaled_data.shape[0])
     random_indices = np.random.choice(np.arange(scaled_data.shape[0]), num_points_desired)
     random_subsample = scaled_data[random_indices]
     wallclock_time = time.time() - start
@@ -69,14 +63,6 @@ def faiss_subsampling_experiment(scaled_data, subsample_fn, title, cutoff):
     }
     save_experiment(title, points_to_keep, experiment_metadata)
 
-# def load_oc20_3k_data():
-#     data = pickle.load(open("./data/oc20_train_torch_data.p", "rb"))
-#     return data
-#
-# def load_qm9_data():
-#     data = pickle.load(open("./data/QM9_train_torch_data.p", "rb"))
-#     return data
-
 
 def dimensionality_reduction_experiment(scaled_data: np.ndarray, base_title: str,
                                         faiss_subsample_method=faiss_ivf_subsample, cutoff: float = 2):
@@ -108,18 +94,17 @@ def dimensionality_reduction_experiment(scaled_data: np.ndarray, base_title: str
             "outlier_retention": outlier_retention
         }
         save_experiment(title, points_to_keep, experiment_metadata, second_level_dir=second_level_dir)
-
+        
 
 def main():
-    scaled_data = load_numpy_data("scaled_and_std_oc20_3k_gmp_fingerprints")
-    random_subsampling_experiment(scaled_data, "oc20_3k_random_subsample", 20000)
-    kmeans_subsampling_experiment(scaled_data, "oc20_3k_kmeans_subsample", 20000)
-    faiss_subsampling_experiment(scaled_data, faiss_flat_subsample, "oc20_3k_faiss_flat_subsample", cutoff=2)
-    faiss_subsampling_experiment(scaled_data, faiss_ivf_subsample, "oc20_3k_faiss_ivf_subsample", cutoff=2)
-    faiss_subsampling_experiment(scaled_data, faiss_ivfpq_subsample, "oc20_3k_faiss_ivfpq_subsample", cutoff=2)
-    dimensionality_reduction_experiment(scaled_data, "oc20_3k_gmp_ivf")
+    scaled_data = load_numpy_data("qm9_train_gmp_fingerprints")
+    random_subsampling_experiment(scaled_data, "qm9_random_subsample", 20000)
+    kmeans_subsampling_experiment(scaled_data, "qm9_kmeans_subsample", 20000)
+    faiss_subsampling_experiment(scaled_data, faiss_flat_subsample, "qm9_faiss_flat_subsample", cutoff=2)
+    faiss_subsampling_experiment(scaled_data, faiss_ivf_subsample, "qm9_faiss_ivf_subsample", cutoff=2)
+    faiss_subsampling_experiment(scaled_data, faiss_ivfpq_subsample, "qm9_faiss_ivfpq_subsample", cutoff=2)
+    dimensionality_reduction_experiment(scaled_data, "qm9_gmp_ivf")
 
-
-
+    
 if __name__ == "__main__":
     main()

@@ -12,45 +12,45 @@ import torch
 # from amptorch.sampler.NearestNeighbor import NearestNeighbor
 
 
-# def convert_and_pickle_atoms(images, dump_name):
-#     sigmas = [0.02, 0.2, 0.4, 0.69, 1.1, 1.66, 2.66, 4.4]
-#
-#     gaussians = {}
-#     dir = "../valence_gaussians"
-#     for file in os.listdir(dir):
-#         el = file.split("_")[0]
-#         gaussians[el] = dir + "/" + file
-#
-#     MCSHs = {
-#         "MCSHs": {
-#             "0": {"groups": [1], "sigmas": sigmas},
-#             "1": {"groups": [1], "sigmas": sigmas},
-#             "2": {"groups": [1, 2], "sigmas": sigmas},
-#             "3": {"groups": [1, 2, 3], "sigmas": sigmas},
-#         },
-#         "atom_gaussians": gaussians,
-#         "cutoff": 8,
-#     }
-#
-#     trainer = AtomsTrainer()
-#     elements = trainer.get_unique_elements(images)
-#     descriptor = GMP(MCSHs=MCSHs, elements=elements)
-#     atoms_to_data = AtomsToData(
-#         descriptor=descriptor,
-#         r_energy=True,
-#         r_forces=False,
-#         save_fps=True,
-#         fprimes=False,
-#         cores=1
-#     )
-#
-#     torch_data = atoms_to_data.convert_all(images)
-#     scaling = {"type": "normalize", "range": (0, 1), "threshold": 1e-6}
-#     feature_scaler = FeatureScaler(torch_data, False, scaling)
-#     target_scaler = TargetScaler(torch_data, False)
-#     feature_scaler.norm(torch_data)
-#     target_scaler.norm(torch_data)
-#     pickle.dump(torch_data, open("{}.p".format(dump_name), "wb"))
+def convert_and_pickle_atoms(images, dump_name):
+    sigmas = [0.02, 0.2, 0.4, 0.69, 1.1, 1.66, 2.66, 4.4]
+
+    gaussians = {}
+    dir = "../valence_gaussians"
+    for file in os.listdir(dir):
+        el = file.split("_")[0]
+        gaussians[el] = dir + "/" + file
+
+    MCSHs = {
+        "MCSHs": {
+            "0": {"groups": [1], "sigmas": sigmas},
+            "1": {"groups": [1], "sigmas": sigmas},
+            "2": {"groups": [1, 2], "sigmas": sigmas},
+            "3": {"groups": [1, 2, 3], "sigmas": sigmas},
+        },
+        "atom_gaussians": gaussians,
+        "cutoff": 8,
+    }
+
+    trainer = AtomsTrainer()
+    elements = trainer.get_unique_elements(images)
+    descriptor = GMP(MCSHs=MCSHs, elements=elements)
+    atoms_to_data = AtomsToData(
+        descriptor=descriptor,
+        r_energy=True,
+        r_forces=False,
+        save_fps=True,
+        fprimes=False,
+        cores=1
+    )
+
+    torch_data = atoms_to_data.convert_all(images)
+    scaling = {"type": "normalize", "range": (0, 1), "threshold": 1e-6}
+    feature_scaler = FeatureScaler(torch_data, False, scaling)
+    target_scaler = TargetScaler(torch_data, False)
+    feature_scaler.norm(torch_data)
+    target_scaler.norm(torch_data)
+    pickle.dump(torch_data, open("{}.p".format(dump_name), "wb"))
 
 def load_qm9_images():
     with open("data/QM9_train_120000_linear_fit.p", 'rb') as pickle_file:

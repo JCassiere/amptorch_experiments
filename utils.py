@@ -1,9 +1,16 @@
-from amptorch.subsampling import subsample_clustering, reduce_dimensions_with_pca, scale_and_standardize_data
+# from amptorch.subsampling import subsample_clustering, reduce_dimensions_with_pca, scale_and_standardize_data
+import ase
+import os
 import ase.io
 import pickle
 import json
 import numpy as np
 from subsampling.GMP_subsample_profile import load_oc20_images, load_qm9_images
+from amptorch.trainer import AtomsTrainer
+from amptorch.preprocessing import AtomsToData, FeatureScaler, TargetScaler
+from amptorch.descriptor.GMPOrderNorm import GMPOrderNorm
+from ccsubsample.subsampling.utils import extract_fingerprints_with_image_indices, scale_and_standardize_data
+from data_exchange import save_to_numpy
 
 # def cluster_images_by_fingerprint_argmax(data, clusters, images, fingerprint_to_image_index):
 #     cluster_image_bincounts = []
@@ -40,12 +47,50 @@ def load_oc20_3k():
     images, _ = load_oc20_images()
     return data, images
 
+def ase_atoms_to_gmp_torch_data(images, MCSHs_index=3, nsigmas=10):
+    # use MCSHs_index = 3 for QM9
+    sigmas = np.linspace(0, 2.0, nsigmas + 1, endpoint=True)[1:]
+    MCSHs = {"orders": [i for i in range(MCSHs_index + 1)], "sigmas": sigmas}
+    gaussians = {}
+    dir = "./valence_gaussians"
+    for file in os.listdir(dir):
+        el = file.split("_")[0]
+        gaussians[el] = dir + "/" + file
 
-def get_clusters(averaged_fingerprints):
-    reduced_data = reduce_dimensions_with_pca(averaged_fingerprints, max_components=6)
-    scaled_data = scale_and_standardize_data(reduced_data)
-    clusters = subsample_clustering(scaled_data, max_clusters=35)
-    return clusters
+    MCSHs_descriptor = {
+        "MCSHs": MCSHs,
+        "atom_gaussians": gaussians,
+        # "cutoff": 10.0,
+        "square": False,
+        "solid_harmonics": True
+    }
+
+    trainer = AtomsTrainer()
+    elements = trainer.get_unique_elements(images)
+    descriptor = GMPOrderNorm(MCSHs=MCSHs_descriptor, elements=elements)
+    atoms_to_data = AtomsToData(
+        descriptor=descriptor,
+        r_energy=True,
+        r_forces=False,
+        save_fps=True,
+        fprimes=False,
+        cores=1
+    )
+
+    torch_data = atoms_to_data.convert_all(images)
+    scaling = {"type": "normalize", "range": (0, 1), "threshold": 1e-6}
+    feature_scaler = FeatureScaler(torch_data, False, scaling)
+    target_scaler = TargetScaler(torch_data, False)
+    feature_scaler.norm(torch_data)
+    target_scaler.norm(torch_data)
+    return torch_data
+
+    
+# def get_clusters(averaged_fingerprints):
+#     reduced_data = reduce_dimensions_with_pca(averaged_fingerprints, max_components=6)
+#     scaled_data = scale_and_standardize_data(reduced_data)
+#     clusters = subsample_clustering(scaled_data, max_clusters=35)
+#     return clusters
 
 
 def images_to_formulas(images):
