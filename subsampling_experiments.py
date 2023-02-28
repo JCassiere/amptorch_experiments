@@ -3,8 +3,6 @@ from ccsubsample.subsampling.utils import *
 from ccsubsample.subsampling.evaluation_metrics import *
 from ccsubsample.subsampling.subsampling import faiss_flat_subsample, faiss_ivf_subsample, faiss_ivfpq_subsample, \
     kmeans_subsample
-import ase.io
-from data_conversion import ase_atoms_to_gmp_torch_data
 
 
 def get_experiment_metadata(subsampled_data: np.ndarray, wallclock_time: float, experiment_title: str) -> dict:
@@ -31,6 +29,11 @@ def get_experiment_metadata_with_outliers(subsampled_data: np.ndarray, outlier_i
     }
     return experiment_metadata
 
+
+def full_dataset_metadata(scaled_data, dataset_description):
+    experiment_title = dataset_description + "_full_dataset"
+    experiment_metadata = get_experiment_metadata(scaled_data, 0, experiment_title)
+    save_experiment(experiment_title, scaled_data, experiment_metadata)
 
 def random_subsampling_experiment(scaled_data, experiment_title, outlier_indices, num_points_desired):
     start = time.time()
@@ -110,6 +113,7 @@ def main():
     scaled_data = load_numpy_data("qm9_train_gmp_fingerprints")
     cutoff_experiment(scaled_data, "qm9_gmp_ivf")
     outlier_indices = get_outlier_indices(scaled_data, outlier_cutoff_modifier=0.07)
+    full_dataset_metadata(scaled_data, "qm9")
     random_subsampling_experiment(scaled_data, "qm9_random_subsample", outlier_indices, 20000)
     kmeans_subsampling_experiment(scaled_data, "qm9_kmeans_subsample", outlier_indices, 20000)
     faiss_subsampling_experiment(scaled_data, faiss_flat_subsample, "qm9_faiss_flat_subsample", outlier_indices,
